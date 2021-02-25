@@ -1,5 +1,7 @@
-install.packages(c('curl', 'jsonlite', 'shiny', 'shinydashboard', 'DT'))
-
+required <- c('curl', 'jsonlite', 'shiny', 'shinydashboard', 'DT')
+for(pkg in required){
+    if (!require(pkg)) install.packages(pkg, repos='https://cloud.r-project.org')
+}
 library(curl)
 library(jsonlite)
 library(shiny)
@@ -65,7 +67,7 @@ server <- function(input, output, session){
         session$onSessionEnded(function(){
           stopApp()
           q('no')
-        }
+        })
     }
 
     sessiondata <- reactiveValues()
@@ -166,16 +168,3 @@ server <- function(input, output, session){
 
 app <- shinyApp(ui=ui, server=server)
 runApp(app, launch.browser=TRUE)
-
-
-
-
-
-
-
-
-
-
-
-
-
