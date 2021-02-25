@@ -1,4 +1,4 @@
-# YGOBC
+# YGOCB
 
 ## Installation 
 A recent-ish version of R is required to make this work, please install the latest version from the following link:
