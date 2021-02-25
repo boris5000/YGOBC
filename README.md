@@ -11,14 +11,14 @@ If you are running from the terminal you can use to launch the application
 ```bash
 Rscript ./app.R
 # Alternatively
-R -e "source('https://raw.githubusercontent.com/boris5000/YGOBC/main/app.R')"
+R -e "source('https://raw.githubusercontent.com/boris5000/YGOCB/main/app.R')"
 # Or
 R -e "source('./app.R')"
 ```
 
 Or from inside an R session
 ```R
-source('https://raw.githubusercontent.com/boris5000/YGOBC/main/app.R')
+source('https://raw.githubusercontent.com/boris5000/YGOCB/main/app.R')
 ```
 
 ## Using the App.
