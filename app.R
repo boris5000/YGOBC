@@ -1,6 +1,6 @@
 required <- c('curl', 'jsonlite', 'shiny', 'shinydashboard', 'DT')
 for(pkg in required){
-    if (!require(pkg)) install.packages(pkg, repos='https://cloud.r-project.org')
+    #if (!require(pkg)) install.packages(pkg, repos='https://cloud.r-project.org')
 }
 library(curl)
 library(jsonlite)
@@ -20,12 +20,13 @@ getCardInfo <- function(){
 read_card_collection_csv <- function(file, db){
     collection <- read.csv(file, stringsAsFactors=FALSE, header=TRUE)
     totals <- tapply(X=collection$cardq, INDEX=collection$cardid, FUN=sum)
-    owned <- cbind(db[as.character(names(totals)),], quantity=totals)
-    owned <- owned[ ,c(1,2,12,3,4,5,6,7,8,9,10,11)]
+    owned <- cbind(img = get_small_img_url(as.character(names(totals))),db[as.character(names(totals)),], quantity=totals)
+    owned <- owned[ ,c(1,2,3,13,4,5,6,7,8,9,10,11,12)]
     return(owned)
 }
 
-get_img_url <- function(id) sprintf("https://storage.googleapis.com/ygoprodeck.com/pics/%s.jpg", id)
+get_small_img_url <- function(id) sprintf('<img src="https://storage.googleapis.com/ygoprodeck.com/pics_small/%s.jpg" height="100"></img>', id)
+get_big_img_url <- function(id) sprintf('<img src="https://storage.googleapis.com/ygoprodeck.com/pics/%s.jpg"></img>', id)
 
 normalise_path <- function(x, root=getwd()){
     fp <- unlist(x)
@@ -160,10 +161,20 @@ server <- function(input, output, session){
         DT::datatable(
             main(),
             selection = 'single',
+            escape=FALSE,
             options = list(pageLength = 100)
         )
     })
 
+    observeEvent(input$main_table_rows_selected, {
+        imgcode <- get_big_img_url(main()[input$main_table_rows_selected, 'id'])
+        showModal(modalDialog(
+            title = "",
+            HTML(imgcode),
+            easyClose = TRUE,
+            footer = NULL
+        ))
+    })
 }
 
 app <- shinyApp(ui=ui, server=server)
