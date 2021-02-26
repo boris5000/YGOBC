@@ -1,6 +1,6 @@
 required <- c('curl', 'jsonlite', 'shiny', 'shinydashboard', 'DT')
 for(pkg in required){
-    #if (!require(pkg)) install.packages(pkg, repos='https://cloud.r-project.org')
+    if (!require(pkg, character.only = TRUE)) install.packages(pkg, repos='https://cloud.r-project.org')
 }
 library(curl)
 library(jsonlite)
