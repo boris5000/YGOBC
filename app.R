@@ -143,7 +143,7 @@ server <- function(input, output, session){
             rows_to_render <- rows_to_render & (sessiondata$owned[,'race'] %in% input$race)
         }
         if(!is.null(input$set)) {
-            rows_to_render <- rows_to_render & grepl(paste(sessiondata$owned, collapse='|'),collection$set)
+            rows_to_render <- rows_to_render & grepl(paste(input$set, collapse='|'), sessiondata$owned[,'set'])
         }
         if(!is.null(input$archetype)) {
             rows_to_render <- rows_to_render & (sessiondata$owned[,'archetype'] %in% input$archetype)
