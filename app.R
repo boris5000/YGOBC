@@ -1,4 +1,5 @@
-required <- c('curl', 'jsonlite', 'shiny', 'shinydashboard', 'DT')
+# V0.0.3
+required <- c('curl', 'jsonlite', 'shiny', 'shinydashboard', 'DT', 'stringr')
 for(pkg in required){
     if (!require(pkg, character.only = TRUE)) install.packages(pkg, repos='https://cloud.r-project.org')
 }
@@ -7,6 +8,7 @@ library(jsonlite)
 library(shiny)
 library(shinydashboard)
 library(DT)
+library(stringr)
 
 getCardInfo <- function(){
     message('Getting Card List...')
@@ -26,7 +28,7 @@ read_card_collection_csv <- function(file, db){
     return(owned)
 }
 
-get_small_img_url <- function(id) sprintf('<img src="https://storage.googleapis.com/ygoprodeck.com/pics_small/%s.jpg" height="100"></img>', id)
+get_small_img_url <- function(id) sprintf('<img src="https://storage.googleapis.com/ygoprodeck.com/pics_small/%s.jpg" height="75"></img>', id)
 get_big_img_url <- function(id) sprintf('<img src="https://storage.googleapis.com/ygoprodeck.com/pics/%s.jpg"></img>', id)
 
 normalise_path <- function(x, root=getwd()){
@@ -46,8 +48,14 @@ ui <- dashboardPage(
                 tabName = 'main',
                 icon = icon('th')
                 ),
+            menuItem(
+                'Deck',
+                tabName = 'deck',
+                icon = icon('th')
+                ),
             uiOutput('collection_import'),
-            uiOutput('searches')
+            uiOutput('searches'),
+            downloadButton("download_button", label = "Export Deck")
         )
     ),
     body = dashboardBody(
@@ -57,6 +65,13 @@ ui <- dashboardPage(
                     uiOutput('sorting_options'),
                     DT::dataTableOutput('main_table')
                 )
+            ),
+            tabItem(tabName = 'deck',
+                fluidPage(
+                    DT::dataTableOutput('main_deck'),
+                    DT::dataTableOutput('side_deck'),
+                    DT::dataTableOutput('extra_deck')
+                )
             )
         )
     )
@@ -64,6 +79,14 @@ ui <- dashboardPage(
 
 server <- function(input, output, session){
     card_db <- getCardInfo()
+
+    deck_cards <- reactiveValues()
+    deck_cards$main_deck_cards <- matrix(NA, 10, 6)
+    deck_cards$side_deck_cards <- matrix(NA, 15, 1)
+    deck_cards$extra_deck_cards <- matrix(NA, 15, 1)
+
+    selected_card <- reactiveValues()
+    selected_card$imgcode <- ''
 
     if(!interactive()) {
         session$onSessionEnded(function(){
@@ -172,15 +195,229 @@ server <- function(input, output, session){
         )
     })
 
+    output$main_deck <- DT::renderDataTable({DT::datatable(t(deck_cards$main_deck_cards), escape=FALSE, selection = list(mode='single',target = 'cell'), options = list(autoWidth = TRUE, searching = FALSE,dom = 't'))})
+    output$side_deck <- DT::renderDataTable({DT::datatable(t(deck_cards$side_deck_cards), escape=FALSE, selection = list(mode='single',target = 'cell'), options = list(autoWidth = TRUE, searching = FALSE,dom = 't'))})
+    output$extra_deck <- DT::renderDataTable({DT::datatable(t(deck_cards$extra_deck_cards), escape=FALSE, selection = list(mode='single',target = 'cell'), options = list(autoWidth = TRUE,searching = FALSE,dom = 't'))})
+
+
+
+    # Main Table Actions??
+
     observeEvent(input$main_table_rows_selected, {
-        imgcode <- get_big_img_url(main()[input$main_table_rows_selected, 'id'])
-        showModal(modalDialog(
-            title = "",
-            HTML(imgcode),
-            easyClose = TRUE,
-            footer = NULL
-        ))
+        id <- main()[input$main_table_rows_selected, 'id']
+        imgcode <- get_small_img_url(id)
+        selected_card$imgcode <- imgcode
+        selected_card$id <- id
+        output$N_Cards_Where <- renderPrint({
+            ggc <- get_global_count(isolate(selected_card$imgcode), isolate(deck_cards))
+            sprintf(
+                'M: (%s) S: (%s) E: (%s)', ggc[1], ggc[2], ggc[3]
+            )
+        })
+        imgcode <- get_big_img_url(id)
+        invoke_card_modal(imgcode)
     })
+
+    output$Card_Ns <- renderPrint({
+        sprintf(
+            'M: (%s/60) S: (%s/15) E: (%s/15)', 
+            sum(!is.na(deck_cards$main_deck_cards)), 
+            sum(!is.na(deck_cards$side_deck_cards)), 
+            sum(!is.na(deck_cards$extra_deck_cards))
+        )
+    })
+
+    output$N_Cards_Where <- renderPrint({
+        ggc <- get_global_count(isolate(selected_card$imgcode), isolate(deck_cards))
+        sprintf(
+            'M: (%s) S: (%s) E: (%s)', ggc[1], ggc[2], ggc[3]
+        )
+    })
+
+    # This needs refactoring.
+    observeEvent(input$addtomain, {
+        id <- selected_card$id
+        ids <- which(main()[, 'id'] == selected_card$id)
+        count <- main()[ids, 'quantity']
+        imgcode <- get_small_img_url(id)
+        ggc <- get_global_count(isolate(selected_card$imgcode), isolate(deck_cards))
+        n_in_decks <- sum(ggc)
+        if(n_in_decks < count & n_in_decks<3){
+            # Show number of slots?
+            deck_cards$main_deck_cards[which(is.na(deck_cards$main_deck_cards))[1]] <- imgcode
+            deck_cards$main_deck_cards <- matrix(sort(deck_cards$main_deck_cards, na.last=TRUE),10,6)
+        }
+    })
+
+    observeEvent(input$removemain,{
+        id <- selected_card$id
+        ids <- which(main()[, 'id'] == selected_card$id)
+        count <- main()[ids, 'quantity']
+        imgcode <- get_small_img_url(id)
+        cardloc <- deck_cards$main_deck_cards == imgcode
+        deck_cards$main_deck_cards[which(cardloc)[1]] <- NA
+        deck_cards$main_deck_cards <- matrix(sort(deck_cards$main_deck_cards, na.last=TRUE),10,6)    
+    })
+
+    observeEvent(input$addtoextra, {
+        id <- selected_card$id
+        ids <- which(main()[, 'id'] == selected_card$id)
+        count <- main()[ids, 'quantity']
+        imgcode <- get_small_img_url(id)
+        ggc <- get_global_count(isolate(selected_card$imgcode), isolate(deck_cards))
+        n_in_decks <- sum(ggc)
+        if(n_in_decks < count & n_in_decks<3){
+            # Show number of slots?
+            deck_cards$extra_deck_cards[which(is.na(deck_cards$extra_deck_cards))[1]] <- imgcode
+            deck_cards$extra_deck_cards <- matrix(sort(deck_cards$extra_deck_cards, na.last=TRUE),15,1)
+        }
+    })
+
+    observeEvent(input$removeextra,{
+        id <- selected_card$id
+        ids <- which(main()[, 'id'] == selected_card$id)
+        count <- main()[ids, 'quantity']
+        imgcode <- get_small_img_url(id)
+        cardloc <- deck_cards$extra_deck_cards == imgcode
+        deck_cards$extra_deck_cards[which(cardloc)[1]] <- NA
+        deck_cards$extra_deck_cards <- matrix(sort(deck_cards$extra_deck_cards, na.last=TRUE),15,1)    
+    })
+
+    observeEvent(input$addtoside, {
+        id <- selected_card$id
+        ids <- which(main()[, 'id'] == selected_card$id)
+        count <- main()[ids, 'quantity']
+        imgcode <- get_small_img_url(id)
+        ggc <- get_global_count(isolate(selected_card$imgcode), isolate(deck_cards))
+        n_in_decks <- sum(ggc)
+        if(n_in_decks < count & n_in_decks<3){
+            # Show number of slots?
+            deck_cards$side_deck_cards[which(is.na(deck_cards$side_deck_cards))[1]] <- imgcode
+            deck_cards$side_deck_cards <- matrix(sort(deck_cards$side_deck_cards, na.last=TRUE),15,1)
+        }
+    })
+
+    observeEvent(input$removeside,{
+        id <- selected_card$id
+        ids <- which(main()[, 'id'] == selected_card$id)
+        count <- main()[ids, 'quantity']
+        imgcode <- get_small_img_url(id)
+        cardloc <- deck_cards$side_deck_cards == imgcode
+        deck_cards$side_deck_cards[which(cardloc)[1]] <- NA
+        deck_cards$side_deck_cards <- matrix(sort(deck_cards$side_deck_cards, na.last=TRUE),15,1)    
+    })
+
+
+    # Deck Table Actions!
+    observeEvent(input$main_deck_cells_selected, {
+        if(length(input$main_deck_cells_selected)>0){
+            idx <- input$main_deck_cells_selected[1,]
+            cellcontents <- deck_cards$main_deck_cards[idx[2]+1, idx[1]]
+            id <- strsplit(strsplit(cellcontents, '/')[[1]], '.jpg')[[6]][1]
+            imgcode <- get_small_img_url(id)
+            selected_card$id <- id
+            selected_card$imgcode <- imgcode
+            output$N_Cards_Where <- renderPrint({
+                ggc <- get_global_count(isolate(selected_card$imgcode), isolate(deck_cards))
+                sprintf(
+                'M: (%s) S: (%s) E: (%s)', ggc[1], ggc[2], ggc[3]
+                )
+            })
+            imgcode <- get_big_img_url(id)
+            invoke_card_modal(imgcode)
+        }
+    })
+    observeEvent(input$side_deck_cells_selected, {
+        if(length(input$side_deck_cells_selected)>0){
+            idx <- input$side_deck_cells_selected[1,]
+            cellcontents <- deck_cards$side_deck_cards[idx[2]+1, idx[1]]
+            id <- strsplit(strsplit(cellcontents, '/')[[1]], '.jpg')[[6]][1]
+            imgcode <- get_small_img_url(id)
+            selected_card$id <- id
+            selected_card$imgcode <- imgcode
+            output$N_Cards_Where <- renderPrint({
+                ggc <- get_global_count(isolate(selected_card$imgcode), isolate(deck_cards))
+                sprintf(
+                'M: (%s) S: (%s) E: (%s)', ggc[1], ggc[2], ggc[3]
+                )
+            })
+            imgcode <- get_big_img_url(id)
+            invoke_card_modal(imgcode)
+        }
+    })
+    observeEvent(input$extra_deck_cells_selected, {
+        if(length(input$extra_deck_cells_selected)>0){
+            idx <- input$extra_deck_cells_selected[1,]
+            cellcontents <- deck_cards$extra_deck_cards[idx[2]+1, idx[1]]
+            id <- strsplit(strsplit(cellcontents, '/')[[1]], '.jpg')[[6]][1]
+            imgcode <- get_small_img_url(id)
+            selected_card$id <- id
+            selected_card$imgcode <- imgcode
+            output$N_Cards_Where <- renderPrint({
+                ggc <- get_global_count(isolate(selected_card$imgcode), isolate(deck_cards))
+                sprintf(
+                'M: (%s) S: (%s) E: (%s)', ggc[1], ggc[2], ggc[3]
+                )
+            })
+            imgcode <- get_big_img_url(id)
+            invoke_card_modal(imgcode)
+        }
+    })
+
+
+    output$download_button <- downloadHandler(
+        filename = function(){
+            paste("Deck-", Sys.Date(), ".ydk", sep = "")
+        },
+        content = function(file) {
+            text<-c(
+                '#created by ...', 
+                '#main', 
+                unlist(lapply(na.omit(as.vector(deck_cards$main_deck_cards)), getpaddedid_from_imgstring)),
+                '#extra',
+                unlist(lapply(na.omit(as.vector(deck_cards$extra_deck_cards)), getpaddedid_from_imgstring)),
+                '!side',
+                unlist(lapply(na.omit(as.vector(deck_cards$side_deck_cards)), getpaddedid_from_imgstring))
+            )
+            print(text)
+            writeLines(paste(text, collapse='\n'), file)
+        }
+    )
+}
+
+getpaddedid_from_imgstring <- function(x){
+    str_pad(as.character(strsplit(strsplit(x, '/')[[1]], '.jpg')[[6]][1]), width=8, side='left', pad='0')
+}
+
+invoke_card_modal <- function(imgcode){
+    showModal(modalDialog(
+        title = "",
+        fluidPage(
+            verbatimTextOutput("Card_Ns"),
+            verbatimTextOutput("N_Cards_Where"),
+            fluidRow(
+                column(4, actionButton('addtomain', 'Add to Main')),
+                column(4, actionButton('addtoside', 'Add to Side')),
+                column(4, actionButton('addtoextra', 'Add to Extra'))
+            ),
+            fluidRow(
+                column(4, actionButton('removemain', 'Remove From Main')),
+                column(4, actionButton('removeside', 'Remove From Side')),
+                column(4, actionButton('removeextra', 'Remove From Extra'))
+            ),
+            HTML(imgcode)
+        ),
+        easyClose = TRUE,
+        footer = NULL
+    ))
+}
+
+get_global_count <- function(card, decks){
+    c(
+        sum(decks$main_deck_cards == card, na.rm = TRUE), 
+        sum(decks$side_deck_cards == card, na.rm = TRUE), 
+        sum(decks$extra_deck_cards == card, na.rm = TRUE)
+    )
 }
 
 app <- shinyApp(ui=ui, server=server)
