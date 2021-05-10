@@ -22,8 +22,10 @@ source('https://raw.githubusercontent.com/boris5000/YGOCB/main/app.R')
 ```
 
 ## Using the App.
-Give the package some time to bake. Once it you see the red error text on the app you are good to go!. 
+Give the App some time to bake. Once you see the red error text on the app you are good to go!. 
 Click the browse button and select a .csv file as obtained by exporting from db.ygoprodeck.com/collection/
+
+You will be able to search various properies of cards specific to your collection and even add them into a 
 
 ###
 If you run into any dependencies errors, just run the following bit of code inside an R session.
@@ -33,3 +35,4 @@ install.packages(c('curl', 'jsonlite', 'shiny', 'shinydashboard', 'DT'))
 
 ## To Do:
 Add support for .ydk files.
+Update Readme
