@@ -23,8 +23,9 @@ read_card_collection_csv <- function(file, db){
     collection <- read.csv(file, stringsAsFactors=FALSE, header=TRUE)
     totals <- tapply(X=collection$cardq, INDEX=collection$cardid, FUN=sum)
     sets <- tapply(X=collection$cardset, INDEX=collection$cardid, FUN=function(x) paste(unique(x), collapse=';'))
-    owned <- cbind(img = get_small_img_url(as.character(names(totals))),db[as.character(names(totals)),], quantity=totals, set=sets)
-    owned <- owned[ ,c(1,2,3,13,4,5,6,7,8,9,10,11,12,14)]
+    rarity <- tapply(X=collection$cardrarity, INDEX=collection$cardid, FUN=function(x) paste(unique(x), collapse=';'))
+    owned <- cbind(img = get_small_img_url(as.character(names(totals))),db[as.character(names(totals)),], quantity=totals, set=sets, rarity=rarity)
+    owned <- owned[ ,c(1,2,3,13,4,5,6,7,8,9,10,11,12,14,15)]
     return(owned)
 }
 
@@ -114,6 +115,7 @@ server <- function(input, output, session){
             selectizeInput('type', label = 'Type', choices=levels(factor(as.character(sessiondata$owned[,'type']))), multiple=TRUE),
             selectizeInput('race', label='Race', choices=levels(factor(as.character(sessiondata$owned[,'race']))), multiple=TRUE),
             selectizeInput('set', label='Card Set', choices=unique(unlist(strsplit(as.character(sessiondata$owned[,'set']), ';'))), multiple=TRUE),
+            selectizeInput('rarity', label='Rarity', choices=unique(unlist(strsplit(as.character(sessiondata$owned[,'rarity']), ';'))), multiple=TRUE),
             selectizeInput('archetype', label='Archetype', choices=levels(factor(as.character(sessiondata$owned[,'archetype']))), multiple=TRUE),
             
         ),
@@ -167,6 +169,9 @@ server <- function(input, output, session){
         }
         if(!is.null(input$set)) {
             rows_to_render <- rows_to_render & grepl(paste(input$set, collapse='|'), sessiondata$owned[,'set'])
+        }
+        if(!is.null(input$rarity)){
+            rows_to_render <- rows_to_render & grepl(paste(input$rarity, collapse='|'), sessiondata$owned[,'rarity'])
         }
         if(!is.null(input$archetype)) {
             rows_to_render <- rows_to_render & (sessiondata$owned[,'archetype'] %in% input$archetype)
