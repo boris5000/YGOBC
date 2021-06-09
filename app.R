@@ -121,7 +121,7 @@ ui <- dashboardPage(
 server <- function(input, output, session){
     card_db <- getCardInfo()
     
-    effects <- c('',
+    effects <- c(
         'Back to Deck', 
         'Back to Hand', 
         'Banish', 
@@ -226,7 +226,7 @@ server <- function(input, output, session){
                     ), step=1))
             ),
             fluidRow(
-                selectizeInput('eff', 'Filter by Effect', choices = effects, multiple = TRUE)   
+                selectizeInput('eff', 'Filter by Effect', choices = levels(factor(effects)), multiple = TRUE)   
             ),
             fluidRow(
                 textInput('fuzzy', label = 'Search Card Descriptions', value = '', placeholder='e.g. Destroy')
@@ -266,7 +266,7 @@ server <- function(input, output, session){
         if(!input$fuzzy == ''){ 
             rows_to_render <- rows_to_render & grepl(input$fuzzy, sessiondata$owned[,'desc'], ignore.case=TRUE)
         }
-        if(!is.null(input$eff) | !input$eff == ''){
+        if(!is.null(input$eff)){
             rows_to_render <- rows_to_render & sessiondata$owned[,'id'] %in% unique(unlist(eff_ids[input$eff]))
         }
         sessiondata$owned[which(rows_to_render), ]
