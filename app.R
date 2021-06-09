@@ -11,7 +11,7 @@ library(DT)
 library(stringr)
 
 effectPosits <- function(){
-    effects <- c(
+    effects <- c('',
         'Back to Deck', 
         'Back to Hand', 
         'Banish', 
@@ -226,7 +226,7 @@ server <- function(input, output, session){
                     ), step=1))
             ),
             fluidRow(
-                selectInput('eff', 'Filter by Effect', choices = effects, selected = '')   
+                selectizeInput('eff', 'Filter by Effect', choices = effects, selected = '', multiple=TRUE)   
             ),
             fluidRow(
                 textInput('fuzzy', label = 'Search Card Descriptions', value = '', placeholder='e.g. Destroy')
