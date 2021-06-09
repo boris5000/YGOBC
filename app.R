@@ -10,6 +10,46 @@ library(shinydashboard)
 library(DT)
 library(stringr)
 
+effectPosits <- function(){
+    effects <- c(
+        'Back to Deck', 
+        'Back to Hand', 
+        'Banish', 
+        'Control', 
+        'Change ATK or DEF',
+        'Counter',
+        'Damage LP',
+        'Destroy Monster', 
+        'Direct Attack',
+        'Draw',
+        'Effect Damage',
+        'Fusion-Related',
+        'Gamble',
+        'Graveyard',
+        'Increase Level', 
+        'LINK-Related',
+        'Negate',
+        'Pendulum-Related',
+        'Piercing',
+        'Recover LP',
+        'Repeat Attack',
+        'Ritual-Related',
+        'Search',
+        'Select',
+        'Special Summon',
+        'Synchro-Related',
+        'Token',
+        'Tuner-Related',
+        'Win the Duel',
+        'XYZ-Related'
+    )
+    names(effects) <- effects
+    effects <- gsub(' ', '%20', effects)
+    ed <- lapply(effects, function(x) jsonlite::fromJSON(rawToChar(curl::curl_fetch_memory(sprintf('https://db.ygoprodeck.com/api/v7/cardinfo.php?effect=%s', x))$content))$data[,1] 
+    )
+    return(ed)
+}
+
 getCardInfo <- function(){
     message('Getting Card List...')
     card_db <- lapply(jsonlite::fromJSON(rawToChar(curl::curl_fetch_memory('https://db.ygoprodeck.com/api/v7/cardinfo.php')$content))$data, c)
@@ -80,6 +120,41 @@ ui <- dashboardPage(
 
 server <- function(input, output, session){
     card_db <- getCardInfo()
+    
+    effects <- c(
+        'Back to Deck', 
+        'Back to Hand', 
+        'Banish', 
+        'Control', 
+        'Change ATK or DEF',
+        'Counter',
+        'Damage LP',
+        'Destroy Monster', 
+        'Direct Attack',
+        'Draw',
+        'Effect Damage',
+        'Fusion-Related',
+        'Gamble',
+        'Graveyard',
+        'Increase Level', 
+        'LINK-Related',
+        'Negate',
+        'Pendulum-Related',
+        'Piercing',
+        'Recover LP',
+        'Repeat Attack',
+        'Ritual-Related',
+        'Search',
+        'Select',
+        'Special Summon',
+        'Synchro-Related',
+        'Token',
+        'Tuner-Related',
+        'Win the Duel',
+        'XYZ-Related'
+    )
+    
+    eff_ids <- effectPosits()
 
     deck_cards <- reactiveValues()
     deck_cards$main_deck_cards <- matrix(NA, 10, 6)
@@ -151,6 +226,9 @@ server <- function(input, output, session){
                     ), step=1))
             ),
             fluidRow(
+                selectInput('eff', 'Filter by Effect', choices = effects, selected = '')   
+            )
+            fluidRow(
                 textInput('fuzzy', label = 'Search Card Descriptions', value = '', placeholder='e.g. Destroy')
             )
         ))
@@ -187,6 +265,9 @@ server <- function(input, output, session){
         }
         if(!input$fuzzy == ''){ 
             rows_to_render <- rows_to_render & grepl(input$fuzzy, sessiondata$owned[,'desc'], ignore.case=TRUE)
+        }
+        if(!is.null(input$eff) | !input$eff == ''){
+            rows_to_render <- rows_to_render & sessiondata$owned[,'id'] %in% unique(unlist(eff_ids[input$eff]))
         }
         sessiondata$owned[which(rows_to_render), ]
     })
