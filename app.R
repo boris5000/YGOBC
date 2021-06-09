@@ -11,7 +11,7 @@ library(DT)
 library(stringr)
 
 effectPosits <- function(){
-    effects <- c('',
+    effects <- c(
         'Back to Deck', 
         'Back to Hand', 
         'Banish', 
@@ -121,7 +121,7 @@ ui <- dashboardPage(
 server <- function(input, output, session){
     card_db <- getCardInfo()
     
-    effects <- c(
+    effects <- c('',
         'Back to Deck', 
         'Back to Hand', 
         'Banish', 
