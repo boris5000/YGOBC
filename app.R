@@ -227,7 +227,7 @@ server <- function(input, output, session){
             ),
             fluidRow(
                 selectInput('eff', 'Filter by Effect', choices = effects, selected = '')   
-            )
+            ),
             fluidRow(
                 textInput('fuzzy', label = 'Search Card Descriptions', value = '', placeholder='e.g. Destroy')
             )
