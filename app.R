@@ -1,4 +1,4 @@
-# V0.0.3
+# V0.0.4
 required <- c('curl', 'jsonlite', 'shiny', 'shinydashboard', 'DT', 'stringr')
 for(pkg in required){
     if (!require(pkg, character.only = TRUE)) install.packages(pkg, repos='https://cloud.r-project.org')
@@ -226,7 +226,7 @@ server <- function(input, output, session){
                     ), step=1))
             ),
             fluidRow(
-                selectizeInput('eff', 'Filter by Effect', choices = effects, selected = '', multiple=TRUE)   
+                selectizeInput('eff', 'Filter by Effect', choices = effects, multiple = TRUE)   
             ),
             fluidRow(
                 textInput('fuzzy', label = 'Search Card Descriptions', value = '', placeholder='e.g. Destroy')
