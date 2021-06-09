@@ -267,7 +267,13 @@ server <- function(input, output, session){
             rows_to_render <- rows_to_render & grepl(input$fuzzy, sessiondata$owned[,'desc'], ignore.case=TRUE)
         }
         if(!is.null(input$eff)){
-            rows_to_render <- rows_to_render & sessiondata$owned[,'id'] %in% unique(unlist(eff_ids[input$eff]))
+            selected <- unique(unlist(eff_ids[input$eff]))
+            if(is.null(selected)){
+            valid <- rows_to_render
+            } else {
+            valid <- sessiondata$owned[,'id'] %in% selected
+            }
+            rows_to_render <- rows_to_render & valid
         }
         sessiondata$owned[which(rows_to_render), ]
     })
