@@ -1,5 +1,5 @@
-# V0.0.4
-required <- c('curl', 'jsonlite', 'shiny', 'shinydashboard', 'DT', 'stringr')
+# V0.0.5
+required <- c('curl', 'jsonlite', 'shiny', 'shinydashboard', 'DT', 'stringr', 'ggplot2')
 for(pkg in required){
     if (!require(pkg, character.only = TRUE)) install.packages(pkg, repos='https://cloud.r-project.org')
 }
@@ -9,6 +9,7 @@ library(shiny)
 library(shinydashboard)
 library(DT)
 library(stringr)
+library(ggplot2)
 
 effectPosits <- function(){
     effects <- c(
@@ -104,7 +105,9 @@ ui <- dashboardPage(
             tabItem(tabName = 'main',
                 fluidPage(
                     uiOutput('sorting_options'),
-                    DT::dataTableOutput('main_table')
+                    DT::dataTableOutput('main_table'),
+                    plotOutput("luck_plot")
+
                 )
             ),
             tabItem(tabName = 'deck',
@@ -173,6 +176,7 @@ server <- function(input, output, session){
 
     sessiondata <- reactiveValues()
     sessiondata$owned <- ''
+    sessiondata$pulls <- ''
 
     output$collection_import <- renderUI({
         fileInput('collection_file', 'Choose File',
@@ -181,6 +185,8 @@ server <- function(input, output, session){
 
     observeEvent(input$collection_file, ignoreNULL=TRUE, {
         sessiondata$owned <- read_card_collection_csv(input$collection_file$datapath, db=card_db)
+        xyz <- read.csv(input$collection_file$datapath, stringsAsFactors=FALSE, header=TRUE)
+        sessiondata$pulls <- cbind(xyz$cardq, xyz$cardrarity)
     })
 
     output$sorting_options <- renderUI({
@@ -291,7 +297,13 @@ server <- function(input, output, session){
     output$side_deck <- DT::renderDataTable({DT::datatable(t(deck_cards$side_deck_cards), escape=FALSE, selection = list(mode='single',target = 'cell'), options = list(autoWidth = TRUE, searching = FALSE,dom = 't'))})
     output$extra_deck <- DT::renderDataTable({DT::datatable(t(deck_cards$extra_deck_cards), escape=FALSE, selection = list(mode='single',target = 'cell'), options = list(autoWidth = TRUE,searching = FALSE,dom = 't'))})
 
-
+    output$luck_plot <- renderPlot({
+        counts <- table(rep(sessiondata$pulls[,2], as.numeric(sessiondata$pulls[,1])))
+        data <- data.frame(rarity = names(counts), counts=counts)
+        ggplot(data, aes(name, counts, fill=rarity))+
+            geom_bar(stat="identity") +
+            geom_text(aes(label=counts), vjust=0)
+    })
 
     # Main Table Actions??
 
