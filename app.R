@@ -300,7 +300,7 @@ server <- function(input, output, session){
     output$luck_plot <- renderPlot({
         counts <- table(rep(sessiondata$pulls[,2], as.numeric(sessiondata$pulls[,1])))
         data <- data.frame(rarity = names(counts), counts=counts)
-        ggplot(data, aes(name, counts, fill=rarity))+
+        ggplot(data, aes(rarity, counts, fill=rarity))+
             geom_bar(stat="identity") +
             geom_text(aes(label=counts), vjust=0)
     })
