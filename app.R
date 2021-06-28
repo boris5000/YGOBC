@@ -1,5 +1,5 @@
 # V0.0.5
-required <- c('curl', 'jsonlite', 'shiny', 'shinydashboard', 'DT', 'stringr', 'ggplot2')
+required <- c('curl', 'jsonlite', 'shiny', 'shinydashboard', 'DT', 'stringr')
 for(pkg in required){
     if (!require(pkg, character.only = TRUE)) install.packages(pkg, repos='https://cloud.r-project.org')
 }
@@ -176,7 +176,6 @@ server <- function(input, output, session){
 
     sessiondata <- reactiveValues()
     sessiondata$owned <- ''
-    sessiondata$pulls <- ''
 
     output$collection_import <- renderUI({
         fileInput('collection_file', 'Choose File',
@@ -185,8 +184,6 @@ server <- function(input, output, session){
 
     observeEvent(input$collection_file, ignoreNULL=TRUE, {
         sessiondata$owned <- read_card_collection_csv(input$collection_file$datapath, db=card_db)
-        xyz <- read.csv(input$collection_file$datapath, stringsAsFactors=FALSE, header=TRUE)
-        sessiondata$pulls <- cbind(xyz$cardq, xyz$cardrarity)
     })
 
     output$sorting_options <- renderUI({
@@ -297,16 +294,7 @@ server <- function(input, output, session){
     output$side_deck <- DT::renderDataTable({DT::datatable(t(deck_cards$side_deck_cards), escape=FALSE, selection = list(mode='single',target = 'cell'), options = list(autoWidth = TRUE, searching = FALSE,dom = 't'))})
     output$extra_deck <- DT::renderDataTable({DT::datatable(t(deck_cards$extra_deck_cards), escape=FALSE, selection = list(mode='single',target = 'cell'), options = list(autoWidth = TRUE,searching = FALSE,dom = 't'))})
 
-    output$luck_plot <- renderPlot({
-        counts <- table(rep(sessiondata$pulls[,2], as.numeric(sessiondata$pulls[,1])))
-        data <- data.frame(rarity = names(counts), counts=counts)
-        ggplot(data, aes(rarity, counts, fill=rarity))+
-            geom_bar(stat="identity") +
-            geom_text(aes(label=counts), vjust=0)
-    })
-
     # Main Table Actions??
-
     observeEvent(input$main_table_rows_selected, {
         id <- main()[input$main_table_rows_selected, 'id']
         imgcode <- get_small_img_url(id)
