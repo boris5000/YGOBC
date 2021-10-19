@@ -9,7 +9,6 @@ library(shiny)
 library(shinydashboard)
 library(DT)
 library(stringr)
-library(ggplot2)
 
 effectPosits <- function(){
     effects <- c(
